@@ -34,10 +34,10 @@ UKF::UKF() {
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 3;
+  std_a_ = 2;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = M_PI;
+  std_yawdd_ = 0.5;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -91,6 +91,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       // Initialise with lidar measurement [x, y]
       x = meas_package.raw_measurements_[0];
       y = meas_package.raw_measurements_[1];
+      // Use smaller initial covariance on x- and y-
+      P_(0, 0) = 0.1;
+      P_(1, 1) = 0.1;
     }
     // Don't initialise at x=0, y=0
     if ((fabs(x) < 0.0001) & (fabs(y) < 0.0001)) {
@@ -98,6 +101,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     }
     x_(0) = x;
     x_(1) = y;
+    // Use larger initial covariance on velocity
+    P_(2, 2) = 10;
 
     std::cout << "Initialisation complete" << std::endl;
     std::cout << "x_initial = " << x_ << std::endl;
