@@ -18,6 +18,12 @@ UKF::UKF() {
   // if this is false, radar measurements will be ignored (except during init)
   use_radar_ = true;
 
+  // State dimension
+  n_x_ = 5;
+
+  // Augmented state dimension
+  n_aug_ = 7;
+
   // initial state vector
   x_ = VectorXd(5);
 
@@ -48,12 +54,6 @@ UKF::UKF() {
   // Radar measurement noise standard deviation radius change in m/s
   std_radrd_ = 0.3;
 
-  // State dimension
-  n_x_ = 5;
-
-  // Augmented state dimension
-  n_aug_ = 7;
-
   // Sigma point spreading parameter
   lambda_ = 3 - n_aug_;
 
@@ -70,12 +70,13 @@ UKF::~UKF() {}
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   // Check for initialisation
   if (!is_initialized_) {
+    std::cout << "Starting initialisation" << std::endl;
     float x, y;
 
     // Sigma point weights
+    weights_ = VectorXd(2 * n_aug_ + 1);
     weights_.fill(0.5 / (lambda_ + n_aug_));
     weights_[0] = lambda_ / (lambda_ + n_aug_);
-    std::cout << "weights = " << weights_ << std::endl;
     // State vector and covariance matrix
     x_.fill(0);
     P_ = MatrixXd::Identity(5, 5);
@@ -101,15 +102,33 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     std::cout << "Initialisation complete" << std::endl;
     std::cout << "x_initial = " << x_ << std::endl;
     std::cout << "P_initial = " << P_ << std::endl;
+
+    // Store timestamp
+    time_us_ = meas_package.timestamp_;
+
+    is_initialized_ = true;
     return;
   }
+
   // Process measurement according to type
   if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
-    if (use_radar_)
+    if (use_radar_) {
+      // Predict step
+      Prediction((meas_package.timestamp_ - time_us_) / 1000000.0);
+      // Store timestamp
+      time_us_ = meas_package.timestamp_;
+      // Update
       UpdateRadar(meas_package);
+    }
   } else {
-    if (use_laser_)
+    if (use_laser_) {
+      // Predict step
+      Prediction((meas_package.timestamp_ - time_us_) / 1000000.0);
+      // Store timestamp
+      time_us_ = meas_package.timestamp_;
+      // Update
       UpdateLidar(meas_package);
+    }
   }
 }
 
